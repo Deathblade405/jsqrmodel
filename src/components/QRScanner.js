@@ -11,6 +11,7 @@ const QRScanner = () => {
   const [qrResult, setQrResult] = useState('');  // State to store QR code result
   const [modelLoaded, setModelLoaded] = useState(false);  // State to track model load status
   const [zoomLevel, setZoomLevel] = useState(1);  // State for zoom level (default is 1)
+  const [mediaStream, setMediaStream] = useState(null);  // State to store media stream
 
   // Initialize the scanner and load TensorFlow model
   useEffect(() => {
@@ -31,6 +32,7 @@ const QRScanner = () => {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' },  // Request rear-facing camera
       });
+      setMediaStream(stream);  // Store the media stream
       if (videoRef.current) videoRef.current.srcObject = stream;
       setIsScanning(true);  // Start scanning
     };
@@ -43,6 +45,25 @@ const QRScanner = () => {
       tracks?.forEach((track) => track.stop());
     };
   }, []);
+
+  // Function to adjust the zoom level on the camera
+  const adjustZoom = (zoom) => {
+    if (mediaStream) {
+      const videoTrack = mediaStream.getVideoTracks()[0]; // Get the video track
+      const capabilities = videoTrack.getCapabilities();
+
+      // Check if the zoom property is supported by the camera
+      if (capabilities.zoom) {
+        const maxZoom = capabilities.zoom.max;
+        const minZoom = capabilities.zoom.min;
+        const newZoom = Math.min(Math.max(zoom, minZoom), maxZoom); // Clamp zoom value between min and max
+
+        videoTrack.applyConstraints({
+          advanced: [{ zoom: newZoom }],
+        });
+      }
+    }
+  };
 
   // Function to scan for QR codes
   const scanQRCode = async () => {
@@ -96,7 +117,9 @@ const QRScanner = () => {
 
   // Handler to update zoom level
   const handleZoomChange = (event) => {
-    setZoomLevel(parseFloat(event.target.value));
+    const newZoomLevel = parseFloat(event.target.value);
+    setZoomLevel(newZoomLevel);  // Update zoom state
+    adjustZoom(newZoomLevel);  // Adjust camera zoom
   };
 
   return (
