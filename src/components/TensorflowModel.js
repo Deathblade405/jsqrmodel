@@ -1,26 +1,18 @@
-import * as tf from '@tensorflow/tfjs';
+import jsQR from 'jsqr';
 
-// Variable to store the model
-let model = null;
-
-// Function to load the model
-export const loadModel = async () => {
-  try {
-    // Try loading the model (replace the URL with a correct model URL if necessary)
-    model = await tf.loadGraphModel('https://tfhub.dev/tensorflow/ssd_mobilenet_v2/2', { fromTFHub: true });
-    console.log('Model loaded successfully.');
-  } catch (error) {
-    console.error('Error loading model:', error);
-  }
-};
-
-// Function to use the model for QR detection
+// Function to use jsQR for QR code detection
 export const detectQRCode = async (imageTensor) => {
-  if (!model) {
-    console.error('Model not loaded.');
-    return null;
+  // Convert the TensorFlow.js tensor to an ImageData object for jsQR
+  const imageData = await imageTensor.toImageData();
+
+  // Decode the QR code using jsQR
+  const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+  if (code) {
+    console.log('QR Code detected:', code.data);
+    return code.data; // Return the QR code data
+  } else {
+    console.log('No QR code detected');
+    return null; // Return null if no QR code is found
   }
-  // Get predictions from the model
-  const predictions = await model.executeAsync(imageTensor);
-  return predictions;
 };

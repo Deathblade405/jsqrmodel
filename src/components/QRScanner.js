@@ -1,7 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import * as tf from '@tensorflow/tfjs';
-import { loadModel, detectQRCode } from './TensorflowModel';  // Import model functions
-import jsQR from 'jsqr';  // Import jsQR for decoding QR codes
 import '../styles/styles.css';  // Import your styles
 
 const QRScanner = () => {
@@ -9,42 +6,58 @@ const QRScanner = () => {
   const canvasRef = useRef(null);  // Reference for the canvas element
   const [isScanning, setIsScanning] = useState(false);  // State to track scanning status
   const [qrResult, setQrResult] = useState('');  // State to store QR code result
-  const [modelLoaded, setModelLoaded] = useState(false);  // State to track model load status
   const [zoomLevel, setZoomLevel] = useState(1);  // State for zoom level (default is 1)
   const [mediaStream, setMediaStream] = useState(null);  // State to store media stream
 
-  // Initialize the scanner and load TensorFlow model
+  // Dynamically load OpenCV.js
   useEffect(() => {
-    const initScanner = async () => {
-      try {
-        // Set backend to WebGL, fallback to CPU if WebGL fails
-        await tf.setBackend('webgl');
-      } catch (err) {
-        console.error('WebGL failed, switching to CPU backend');
-        await tf.setBackend('cpu');  // Fall back to CPU backend if WebGL is not supported
-      }
-
-      // Load the model
-      await loadModel();
-      setModelLoaded(true);
-
-      // Access the user's rear camera (if available)
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },  // Request rear-facing camera
+    const loadOpenCV = () => {
+      return new Promise((resolve, reject) => {
+        if (window.cv) {
+          resolve(window.cv);  // OpenCV.js is already loaded
+        } else {
+          window.cv.onRuntimeInitialized = () => {
+            resolve(window.cv);  // OpenCV.js has finished loading
+          };
+          // Load the OpenCV.js script
+          const script = document.createElement('script');
+          script.src = 'https://docs.opencv.org/master/opencv.js';
+          script.async = true;
+          script.onload = () => resolve(window.cv);
+          script.onerror = (err) => reject(err);
+          document.body.appendChild(script);
+        }
       });
-      setMediaStream(stream);  // Store the media stream
-      if (videoRef.current) videoRef.current.srcObject = stream;
-      setIsScanning(true);  // Start scanning
     };
 
-    initScanner();
+    loadOpenCV()
+      .then((cv) => {
+        console.log('OpenCV.js loaded');
+        // Proceed with QR scanner setup
+        initScanner();
+      })
+      .catch((err) => {
+        console.error('Error loading OpenCV.js:', err);
+      });
 
-    // Cleanup on component unmount (stop camera tracks)
+    // Cleanup OpenCV.js if necessary
     return () => {
-      const tracks = videoRef.current?.srcObject?.getTracks();
-      tracks?.forEach((track) => track.stop());
+      const script = document.querySelector('script[src="https://docs.opencv.org/master/opencv.js"]');
+      if (script) {
+        script.remove();
+      }
     };
   }, []);
+
+  // Initialize the scanner and load OpenCV.js
+  const initScanner = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' },  // Request rear-facing camera
+    });
+    setMediaStream(stream);  // Store the media stream
+    if (videoRef.current) videoRef.current.srcObject = stream;
+    setIsScanning(true);  // Start scanning
+  };
 
   // Function to adjust the zoom level on the camera
   const adjustZoom = (zoom) => {
@@ -65,9 +78,9 @@ const QRScanner = () => {
     }
   };
 
-  // Function to scan for QR codes
+  // Function to scan for QR codes using OpenCV.js
   const scanQRCode = async () => {
-    if (!videoRef.current || !canvasRef.current || !isScanning || !modelLoaded) return;
+    if (!videoRef.current || !canvasRef.current || !isScanning) return;
 
     const canvas = canvasRef.current;
     const video = videoRef.current;
@@ -79,41 +92,42 @@ const QRScanner = () => {
       return;
     }
 
-    // Set canvas dimensions to match the video, adjusted by the zoom level
-    canvas.width = video.videoWidth * zoomLevel;
-    canvas.height = video.videoHeight * zoomLevel;
+    // Set canvas dimensions to match the video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
 
-    // Draw the current video frame on the canvas, also scaling by zoom level
+    // Draw the current video frame on the canvas
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Convert the canvas image to a tensor and resize it for performance
+    // Get the image data from the canvas
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const imageTensor = tf.browser.fromPixels(imageData).resizeBilinear([224, 224]);  // Resize to 224x224
 
-    try {
-      // Use TensorFlow model for QR detection (this is optional, you could just use jsQR directly)
-      const predictions = await detectQRCode(imageTensor);
+    // Convert the image data to an OpenCV Mat
+    const mat = window.cv.imread(canvas);
 
-      // Decode the QR code using jsQR
-      const code = jsQR(imageData.data, canvas.width, canvas.height);
-      if (code) {
-        setQrResult(code.data);  // Set QR code result
-        setIsScanning(false);  // Stop scanning after detection
-        return;
-      }
-    } catch (err) {
-      console.error('Error during QR detection:', err);
+    // Create a QRCodeDetector object
+    const qrCodeDetector = new window.cv.QRCodeDetector();
+
+    // Detect and decode the QR code
+    const [ok, points, decodedText] = qrCodeDetector.detectAndDecode(mat);
+
+    if (ok) {
+      // QR code detected successfully
+      setQrResult(decodedText);  // Set the QR code result
+      setIsScanning(false);  // Stop scanning
+      return;
     }
 
-    requestAnimationFrame(scanQRCode);  // Retry if no QR code is detected
+    // Continue scanning if no QR code is detected
+    requestAnimationFrame(scanQRCode);
   };
 
-  // Trigger the scanning loop when scanning is enabled and model is loaded
+  // Trigger the scanning loop when scanning is enabled
   useEffect(() => {
-    if (isScanning && modelLoaded) {
+    if (isScanning) {
       scanQRCode();
     }
-  }, [isScanning, modelLoaded, zoomLevel]);  // Add zoomLevel as dependency
+  }, [isScanning]);  // Add zoomLevel as dependency if needed
 
   // Handler to update zoom level
   const handleZoomChange = (event) => {
