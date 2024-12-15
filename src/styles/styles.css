@@ -98,3 +98,24 @@ body {
     }
   }
   
+
+  /* Zoom slider container */
+.zoom-container {
+    margin-top: 20px;
+    text-align: center;
+  }
+  
+  /* Zoom slider input */
+  #zoom-slider {
+    width: 100%;
+    max-width: 300px;
+    margin-top: 10px;
+  }
+  
+  /* Zoom text display */
+  .zoom-container span {
+    display: block;
+    margin-top: 5px;
+    font-weight: bold;
+  }
+  

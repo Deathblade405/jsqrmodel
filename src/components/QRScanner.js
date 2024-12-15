@@ -10,6 +10,7 @@ const QRScanner = () => {
   const [isScanning, setIsScanning] = useState(false);  // State to track scanning status
   const [qrResult, setQrResult] = useState('');  // State to store QR code result
   const [modelLoaded, setModelLoaded] = useState(false);  // State to track model load status
+  const [zoomLevel, setZoomLevel] = useState(1);  // State for zoom level (default is 1)
 
   // Initialize the scanner and load TensorFlow model
   useEffect(() => {
@@ -57,11 +58,11 @@ const QRScanner = () => {
       return;
     }
 
-    // Set canvas dimensions to match the video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // Set canvas dimensions to match the video, adjusted by the zoom level
+    canvas.width = video.videoWidth * zoomLevel;
+    canvas.height = video.videoHeight * zoomLevel;
 
-    // Draw the current video frame on the canvas
+    // Draw the current video frame on the canvas, also scaling by zoom level
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     // Convert the canvas image to a tensor and resize it for performance
@@ -91,7 +92,12 @@ const QRScanner = () => {
     if (isScanning && modelLoaded) {
       scanQRCode();
     }
-  }, [isScanning, modelLoaded]);
+  }, [isScanning, modelLoaded, zoomLevel]);  // Add zoomLevel as dependency
+
+  // Handler to update zoom level
+  const handleZoomChange = (event) => {
+    setZoomLevel(parseFloat(event.target.value));
+  };
 
   return (
     <div className="scanner-container">
@@ -104,6 +110,7 @@ const QRScanner = () => {
       ) : (
         <p>{isScanning ? 'Scanning...' : 'Initializing...'}</p>
       )}
+      
       {/* Video element to preview the camera feed */}
       <video
         ref={videoRef}
@@ -112,8 +119,24 @@ const QRScanner = () => {
         muted
         className="video-preview"
       ></video>
+
       {/* Hidden canvas used for processing video frames */}
       <canvas ref={canvasRef} style={{ display: 'none' }}></canvas>
+
+      {/* Zoom slider */}
+      <div className="zoom-container">
+        <label htmlFor="zoom-slider">Zoom:</label>
+        <input
+          id="zoom-slider"
+          type="range"
+          min="1"
+          max="3"
+          step="0.1"
+          value={zoomLevel}
+          onChange={handleZoomChange}
+        />
+        <span>{zoomLevel.toFixed(1)}x</span>
+      </div>
     </div>
   );
 };
