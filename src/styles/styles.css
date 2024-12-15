@@ -1,0 +1,100 @@
+/* Global Styles */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f0f0f0;
+    color: #333;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  
+  /* Container for the scanner */
+  .scanner-container {
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    width: 90%;
+    max-width: 500px;
+    text-align: center;
+  }
+  
+  /* Title */
+  h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #333;
+    font-weight: 600;
+  }
+  
+  /* Video element */
+  .video-preview {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    border: 2px solid #ddd;
+    margin-bottom: 20px;
+    background: #f5f5f5;
+  }
+  
+  /* Hidden canvas element */
+  canvas {
+    display: none;
+  }
+  
+  /* QR Result display */
+  .qr-result {
+    background: #e0f7fa;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 1.2em;
+    color: #00796b;
+    margin-top: 20px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    word-wrap: break-word;
+  }
+  
+  /* Loader text */
+  p {
+    font-size: 1.1em;
+    color: #555;
+  }
+  
+  /* Animating text when scanning */
+  p.scanning {
+    font-size: 1.1em;
+    color: #ff5722;
+    font-weight: bold;
+    animation: scanningAnimation 1s infinite;
+  }
+  
+  /* Keyframe animation for scanning message */
+  @keyframes scanningAnimation {
+    0% { color: #ff5722; }
+    50% { color: #ff9800; }
+    100% { color: #ff5722; }
+  }
+  
+  /* Mobile responsive styles */
+  @media (max-width: 600px) {
+    .scanner-container {
+      padding: 15px;
+      width: 95%;
+    }
+  
+    h2 {
+      font-size: 20px;
+    }
+  
+    .qr-result {
+      font-size: 1em;
+    }
+  
+    .video-preview {
+      border-radius: 8px;
+    }
+  }
+  
